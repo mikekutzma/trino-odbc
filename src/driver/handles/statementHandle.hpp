@@ -27,6 +27,10 @@ class Statement {
   public:
     Statement(ConnectionConfig* connectionConfig);
     ~Statement();
+    // Has this statement been prepared (via SQLPrepare)?
+    bool isPrepared = false;
+    // The SQL text stored by SQLPrepare.
+    std::string preparedQueryText;
     // Has this statement been executed?
     bool executed = false;
     // Did we confirm execution of this statement to SQLFetch?

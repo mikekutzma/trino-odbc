@@ -100,6 +100,8 @@ void Statement::reset() {
   this->executed              = false;
   this->fetchExecuteConfirmed = false;
   this->fetchedPosition       = -1;
+  this->isPrepared            = false;
+  this->preparedQueryText.clear();
   this->trinoQuery->reset();
   this->impParamDesc->reset();
   this->impRowDesc->reset();

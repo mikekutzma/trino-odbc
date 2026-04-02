@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  push:
+    paths:
+      - '**/*.cpp'
+      - '**/*.hpp'
+      - '**/CMakeLists.txt'
+      - 'vcpkg.json'
+      - 'CMakePresets.json'
+      - '.github/workflows/build.yml'
+  pull_request:
+    paths:
+      - '**/*.cpp'
+      - '**/*.hpp'
+      - '**/CMakeLists.txt'
+      - 'vcpkg.json'
+      - 'CMakePresets.json'
+      - '.github/workflows/build.yml'
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Run vcpkg
+        uses: lukka/run-vcpkg@v11
+
+      - name: Build x64
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cmake --preset x64-release
+          cmake --build --preset x64-release
+
+      - name: Build x86
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86
+          cmake --preset x86-release
+          cmake --build --preset x86-release

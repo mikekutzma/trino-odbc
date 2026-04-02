@@ -8,6 +8,7 @@
 #include "authProvider/deviceFlowAuthProvider.hpp"
 #include "authProvider/externalAuthProvider.hpp"
 #include "authProvider/noAuthProvider.hpp"
+#include "authProvider/passwordAuthProvider.hpp"
 
 
 using json = nlohmann::json;
@@ -52,7 +53,9 @@ ConnectionConfig::ConnectionConfig(std::string hostname,
                                    std::string clientSecret,
                                    std::string oidcScope,
                                    std::string grantType,
-                                   std::string tokenEndpoint) {
+                                   std::string tokenEndpoint,
+                                   std::string username,
+                                   std::string password) {
 
   this->hostname       = hostname;
   this->port           = port;
@@ -97,6 +100,11 @@ ConnectionConfig::ConnectionConfig(std::string hostname,
                                                       clientId,
                                                       clientSecret,
                                                       oidcScope);
+      break;
+    }
+    case AM_PASSWORD_AUTH: {
+      this->authConfigPtr =
+          getPasswordAuthConfigPtr(hostname, port, connectionName, username, password);
       break;
     }
 

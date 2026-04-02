@@ -32,6 +32,7 @@ add_library(TrinoODBC SHARED
             "src/trinoAPIWrapper/authProvider/clientCredAuthProvider.cpp"
             "src/trinoAPIWrapper/authProvider/externalAuthProvider.cpp"
             "src/trinoAPIWrapper/authProvider/noAuthProvider.cpp"
+            "src/trinoAPIWrapper/authProvider/passwordAuthProvider.cpp"
             "src/trinoAPIWrapper/authProvider/tokenCacheAuthProviderBase.cpp"
             "src/trinoAPIWrapper/authProvider/deviceFlowAuthProvider.cpp"
             "src/trinoAPIWrapper/trinoQuery.cpp"
@@ -118,6 +119,7 @@ add_library(TrinoODBC SHARED
             "src/driver/setStmtAttr.cpp"
             "src/driver/statistics.cpp"
             "src/driver/tables.cpp"
+            "src/driver/unicodeFunctions.cpp"
 )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

@@ -1,0 +1,279 @@
+╭─── Claude Code v2.1.89 ──────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Mike!                 │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ Recent activity         │
+│                        ▘▘ ▝▝                       │ No recent activity      │
+│       Sonnet 4.6 · Claude Pro ·                    │                         │
+│       michaelkutzma@gmail.com's Organization       │                         │
+│                    ~/trino-odbc                    │                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+⏺ Write(src/driver/unicodeFunctions.cpp)
+  ⎿  Wrote 571 lines to src/driver/unicodeFunctions.cpp
+       1 /*
+       2  * Unicode (W-suffix) ODBC entry points.
+       3  *
+       4  * The Windows Driver Manager prefers W-suffix functions when co
+         nnecting from
+       5  * Unicode-aware applications such as PowerBI.  Each function he
+         re is a thin
+       6  * shim that:
+       7  *   - converts SQLWCHAR* (UTF-16LE) inputs to std::string (UTF-
+         8/ANSI), then
+       8  *     calls the corresponding ANSI entry point, and
+       9  *   - converts any SQLCHAR* string outputs back to SQLWCHAR* (U
+         TF-16LE).
+      10  *
+     … +561 lines (ctrl+o to expand)
+
+⏺ Now add the new file to CMakeLists.txt and update getFunctions.cpp to
+  advertise the new W functions and the newly implemented functions:
+
+⏺ Update(CMakeLists.txt)
+  ⎿  Added 1 line
+      119              "src/driver/setStmtAttr.cpp"
+      120              "src/driver/statistics.cpp"
+      121              "src/driver/tables.cpp"
+      122 +            "src/driver/unicodeFunctions.cpp"                 
+      123  )
+      124  
+      125  if (CMAKE_VERSION VERSION_GREATER 3.12)
+
+⏺ Now update getFunctions.cpp to advertise the W-suffix functions and the newly
+  implemented functions (SQLPrepare, SQLExecute, SQLBindParameter,
+  SQLFetchScroll):
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ I need to fix a duplicate case label issue in execute.cpp — SQL_C_LONG and
+  SQL_C_SLONG are the same constant, as are SQL_C_SHORT/SQL_C_SSHORT. Let me
+  also check the reset function:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Fix the duplicate case labels in execute.cpp (SQL_C_LONG = SQL_C_SLONG,
+  SQL_C_SHORT = SQL_C_SSHORT), and reset prepared state in Statement::reset():
+
+⏺ Update(src/driver/execute.cpp)
+  ⎿  Added 2 lines, removed 4 lines
+      67        }
+      68        return "'" + escaped + "'";
+      69      }
+      70 -    case SQL_C_LONG:                                           
+      71 -    case SQL_C_SLONG: {                                        
+      70 +    case SQL_C_SLONG: {  // SQL_C_LONG is an alias for SQL_C_SL
+         +ONG                                                            
+      71        SQLINTEGER val = *static_cast<const SQLINTEGER*>(field.bu
+          fferPtr);
+      72        return std::to_string(val);
+      73      }
+     ...
+      75        SQLUINTEGER val = *static_cast<const SQLUINTEGER*>(field.
+          bufferPtr);
+      76        return std::to_string(val);
+      77      }
+      79 -    case SQL_C_SHORT:                                          
+      80 -    case SQL_C_SSHORT: {                                       
+      78 +    case SQL_C_SSHORT: {  // SQL_C_SHORT is an alias for SQL_C_
+         +SSHORT                                                         
+      79        SQLSMALLINT val = *static_cast<const SQLSMALLINT*>(field.
+          bufferPtr);
+      80        return std::to_string(val);
+      81      }
+
+⏺ Now reset the prepared statement state when a statement is re-used:
+
+⏺ Update(src/driver/handles/statementHandle.cpp)
+  ⎿  Added 2 lines
+      100    this->executed              = false;
+      101    this->fetchExecuteConfirmed = false;
+      102    this->fetchedPosition       = -1;
+      103 +  this->isPrepared            = false;                        
+      104 +  this->preparedQueryText.clear();                            
+      105    this->trinoQuery->reset();
+      106    this->impParamDesc->reset();
+      107    this->impRowDesc->reset();
+
+⏺ All Phase 1 tasks are done. Let me save a memory note about this project and
+  verify the files I've created look correct:
+
+⏺ Bash(git diff --stat HEAD)
+  ⎿   CMakeLists.txt                           |   2 +
+      src/driver/bindParameter.cpp             |  32 ++++-
+      src/driver/config/driverConfig.cpp       |  38 +++++-
+     … +12 lines (ctrl+o to expand)
+
+⏺ Bash(git status --short)
+  ⎿   M CMakeLists.txt
+      M src/driver/bindParameter.cpp
+      M src/driver/config/driverConfig.cpp
+     … +13 lines (ctrl+o to expand)
+
+⏺ All 16 files (13 modified + 3 new) are in order. Here's a summary of what was
+  implemented in Phase 1:
+
+  ---
+  Phase 1 complete — 5 tasks, 16 files changed.
+
+  What was built:
+
+  1. Password (Basic auth) provider — New passwordAuthProvider.cpp/hpp. Uses
+  Windows CryptBinaryToStringA to base64-encode user:password, sets
+  Authorization: Basic <token> and X-Trino-User headers. Wired through
+  apiAuthMethod.hpp (new AM_PASSWORD_AUTH = 4), driverConfig.cpp/hpp (new
+  username/password fields, UID/PWD KVP aliases), connectionConfig.cpp/hpp, and
+  connHandle.cpp. Connection string:
+  Driver=TrinoODBC;HOST=...;PORT=8080;AuthMethod=Password Auth;UID=user;PWD=pass
+
+  2. SQLPrepare + SQLExecute — prepare.cpp stores the SQL text on the Statement
+  handle and marks isPrepared = true. execute.cpp substitutes bound parameters
+  (via substituteParams()) using type-aware quoting: strings get single-quote
+  escaping, dates get DATE 'YYYY-MM-DD' syntax, timestamps get TIMESTAMP '...',
+  booleans get TRUE/FALSE. Then posts to Trino via the existing REST client.
+
+  3. SQLBindParameter — Stores parameter bindings on appParamDesc (the
+  application parameter descriptor), mirroring how SQLBindCol uses appRowDesc.
+  Supports all common C types.
+
+  4. SQLFetchScroll — SQL_FETCH_NEXT delegates to SQLFetch. All other
+  orientations return SQL_ERROR with a clear message (Trino result sets are
+  forward-only).
+
+  5. Unicode W-suffix functions — New unicodeFunctions.cpp with 12 W-suffix
+  entry points: SQLDriverConnectW, SQLExecDirectW, SQLPrepareW, SQLGetInfoW
+  (string vs. numeric type detection), SQLColAttributeW, SQLDescribeColW,
+  SQLGetDiagRecW, SQLTablesW, SQLColumnsW, SQLGetConnectAttrW,
+  SQLSetConnectAttrW, SQLGetStmtAttrW, SQLSetStmtAttrW, SQLNativeSqlW. All use
+  WideCharToMultiByte/MultiByteToWideChar for UTF-16 ↔ UTF-8 conversion.
+
+✻ Churned for 9m 49s
+
+❯ I'm currently on a macbook, what's the easiest way to test out compiling      
+this? Can I run a windows VM (natively or in podman or on my proxmox), or is    
+there some way to compile locally?                                              
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+⏺ Here's the full picture of your options, ranked by ease:
+
+  ---
+  Option 1: GitHub Actions (easiest, zero setup)
+
+  The release workflow already builds on windows-2022 runners with MSVC + vcpkg.
+   Add a simple build-on-push workflow to get compile feedback on every push
+  without waiting for a tag:
+
+  # .github/workflows/build.yml
+  name: Build
+
+  on: [push, pull_request]
+
+  jobs:
+    build:
+      runs-on: windows-2022
+      steps:
+        - uses: actions/checkout@v4
+        - uses: lukka/get-cmake@latest
+        - uses: lukka/run-vcpkg@v11
+        - name: Build x64
+          shell: cmd
+          run: |
+            call "C:\Program Files\Microsoft Visual 
+  Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+            cmake --preset x64-release
+            cmake --build --preset x64-release
+
+  Push to GitHub → watch the Actions tab. Free for public repos, and you get the
+   exact same MSVC toolchain the release uses. No local setup at all.
+
+  ---
+  Option 2: Cross-compile with llvm-mingw on macOS (best local option)
+
+  The driver's dependencies (curl, nlohmann-json, wincrypt, odbccp32) all have
+  MinGW stubs, so this actually works:
+
+  # Install the cross-compiler and vcpkg
+  brew install llvm-mingw-w64
+  brew install cmake ninja
+
+  git clone https://github.com/microsoft/vcpkg ~/vcpkg
+  ~/vcpkg/bootstrap-vcpkg.sh
+
+  # Install deps for the x64-mingw-dynamic triplet
+  ~/vcpkg/vcpkg install curl nlohmann-json gtest --triplet x64-mingw-dynamic
+
+  # Build
+  cmake -B build-mingw \
+    -DCMAKE_TOOLCHAIN_FILE=~/vcpkg/scripts/buildsystems/vcpkg.cmake \
+    -DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic \
+    -DCMAKE_SYSTEM_NAME=Windows \
+    -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+    -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
+  cmake --build build-mingw
+
+  Produces a .dll you can copy to Windows. Caveat: doesn't run locally, but you
+  get fast compile-error feedback without needing a VM or pushing to GitHub.
+
+  ---
+  Option 3: Windows VM on your Proxmox (best for full development)
+
+  Since you already have Proxmox, this is the best environment for actual
+  testing with PowerBI. A minimal setup:
+
+  1. Spin up a Windows 11 or Windows Server 2022 VM
+  2. Install Visual Studio Build Tools 2022 (choose "Desktop development with
+  C++")
+  3. Install Git and clone the repo
+  4. vcpkg bootstraps automatically via lukka/run-vcpkg logic, or: git clone 
+  https://github.com/microsoft/vcpkg && .\vcpkg\bootstrap-vcpkg.bat
+  5. cmake --preset x64-release && cmake --build --preset x64-release
+
+  This also lets you install the .msi, open PowerBI Desktop, and actually test
+  the driver end-to-end against a Trino Docker container you run elsewhere on
+  Proxmox.
+
+  ---
+  Option 4: UTM on your Mac (Windows on-device)
+
+  UTM is free and runs Windows ARM natively on Apple Silicon (fast), or Windows
+  x86 via emulation (slow). Good if you want Windows accessible locally without
+  Proxmox. Same setup as Option 3 once Windows is running.
+
+  ---
+  My recommendation: Start with Option 1 (add the build workflow above, push,
+  check for compile errors) since it costs nothing and gives you green/red
+  feedback in 3 minutes. Use Option 3 (Proxmox VM) once you're ready to actually
+   install and test the driver with PowerBI.
+
+✻ Cogitated for 1m 0s
+
+❯ Okay go ahead and add the github workflow for #1                              
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Write(.github/workflows/build.yml)
+  ⎿  Wrote 47 lines to .github/workflows/build.yml
+       1 name: Build
+       2 
+       3 on:
+       4   push:
+       5     paths:
+       6       - '**/*.cpp'
+       7       - '**/*.hpp'
+       8       - '**/CMakeLists.txt'
+       9       - 'vcpkg.json'
+      10       - 'CMakePresets.json'
+     … +37 lines (ctrl+o to expand)
+
+⏺ Done. The workflow:
+
+  - Triggers on push/PR only when source files or build config change (no
+  unnecessary runs for doc edits)
+  - Mirrors the release workflow exactly — same windows-2022 runner, same MSVC
+  toolchain via vcvarsall.bat, same vcpkg setup
+  - Builds both x64 and x86 so you catch any arch-specific issues
+
+  Push your branch to GitHub and it'll appear under the Actions tab within a few
+   seconds of pushing.
