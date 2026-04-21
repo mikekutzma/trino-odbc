@@ -83,18 +83,30 @@ std::string refreshExternalAuth(ExternalAuthParams& params) {
     return "";
   }
 
-  // Parse the www-authenticate header to find the URL that we need
-  // to navigate to in order to trigger external authentication to work.
-  // The header uses this form:
-  // www-authenticate: Bearer x_redirect_server="https://...",
-  // x_token_server="https://..." This is basically a "Bearer " prefix on a
-  // comma delimited set of key-value pairs
-  std::string headerKVPs = params.responseHeaderData->at("www-authenticate");
+  // Trino may send multiple www-authenticate challenges (e.g., Basic and
+  // Bearer) as separate HTTP headers. They are stored concatenated with
+  // newlines. Find the Bearer challenge that contains the redirect params
+  // needed for external authentication.
+  std::string wwwAuthHeader = params.responseHeaderData->at("www-authenticate");
+  std::string bearerPrefix  = "Bearer ";
+  std::string headerKVPs;
 
-  // We need to strip the word "Bearer" off of the front of this text before
-  // we try to parse it. Also take the space character following the word.
-  std::string wordBearer = "Bearer";
-  headerKVPs.erase(0, wordBearer.size() + 1);
+  size_t bearerPos = wwwAuthHeader.find(bearerPrefix);
+  if (bearerPos != std::string::npos) {
+    size_t kvpStart = bearerPos + bearerPrefix.size();
+    size_t kvpEnd   = wwwAuthHeader.find('\n', kvpStart);
+    headerKVPs      = wwwAuthHeader.substr(kvpStart,
+                                           kvpEnd == std::string::npos
+                                               ? std::string::npos
+                                               : kvpEnd - kvpStart);
+  }
+
+  if (headerKVPs.empty()) {
+    WriteLog(LL_ERROR,
+             "  ERROR: No Bearer challenge found in www-authenticate header");
+    WriteLog(LL_ERROR, "  Header value was: " + wwwAuthHeader);
+    return "";
+  }
 
   // The www-authenticate header contains a comma delimited list
   // of key vaule pairs.
