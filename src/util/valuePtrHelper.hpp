@@ -4,6 +4,7 @@
 #include <sql.h>
 #include <sqlext.h>
 
+#include <cstring>
 #include <string>
 
 /*
@@ -19,13 +20,11 @@ template <class T>
 void writeNullTermStringToPtr(SQLPOINTER InfoValuePtr,
                               std::string s,
                               T* StringLengthPtr) {
-  rsize_t length           = s.length();
-  rsize_t nullcharPosition = length + 1;
+  size_t length = s.length();
   if (InfoValuePtr) {
     char* infoCharPtr = reinterpret_cast<char*>(InfoValuePtr);
-    // strcpy_s is documented to write a null terminator to the
-    // destination character array.
-    strcpy_s(infoCharPtr, nullcharPosition, s.c_str());
+    std::memcpy(infoCharPtr, s.c_str(), length);
+    infoCharPtr[length] = '\0';
   }
   if (StringLengthPtr) {
     *StringLengthPtr = static_cast<T>(length);

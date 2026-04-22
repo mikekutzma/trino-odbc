@@ -25,16 +25,8 @@ https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-func
  targets. For 32-bit, NumericAttributePtr is a SQLPOINTER, but for
  64-bit, its a SQLLEN*.
  */
-#if defined(_WIN64)
-SQLRETURN SQL_API SQLColAttribute(SQLHSTMT StatementHandle,
-                                  SQLUSMALLINT ColumnNumber,
-                                  SQLUSMALLINT FieldIdentifier,
-                                  _Out_writes_bytes_opt_(BufferLength)
-                                      SQLPOINTER CharacterAttributePtr,
-                                  SQLSMALLINT BufferLength,
-                                  _Out_opt_ SQLSMALLINT* StringLengthPtr,
-                                  _Out_opt_ SQLLEN* NumericAttributePtr) {
-#else
+#if defined(_WIN32) && !defined(_WIN64)
+// 32-bit Windows uses SQLPOINTER for the last parameter
 SQLRETURN SQL_API SQLColAttribute(SQLHSTMT StatementHandle,
                                   SQLUSMALLINT ColumnNumber,
                                   SQLUSMALLINT FieldIdentifier,
@@ -43,6 +35,16 @@ SQLRETURN SQL_API SQLColAttribute(SQLHSTMT StatementHandle,
                                   SQLSMALLINT BufferLength,
                                   _Out_opt_ SQLSMALLINT* StringLengthPtr,
                                   _Out_opt_ SQLPOINTER NumericAttributePtr) {
+#else
+// 64-bit Windows and unixODBC use SQLLEN*
+SQLRETURN SQL_API SQLColAttribute(SQLHSTMT StatementHandle,
+                                  SQLUSMALLINT ColumnNumber,
+                                  SQLUSMALLINT FieldIdentifier,
+                                  _Out_writes_bytes_opt_(BufferLength)
+                                      SQLPOINTER CharacterAttributePtr,
+                                  SQLSMALLINT BufferLength,
+                                  _Out_opt_ SQLSMALLINT* StringLengthPtr,
+                                  _Out_opt_ SQLLEN* NumericAttributePtr) {
 #endif
 #pragma warning(pop)
   WriteLog(LL_TRACE, "Entering SQLColAttribute");

@@ -35,6 +35,7 @@ TEST(CryptUtilsTest, RoundTripSystemEmptyString) {
   EXPECT_EQ(secret, decrypted);
 }
 
+#ifdef _WIN32
 TEST(CryptUtilsTest, UserAndSystemSecretsAreDifferent) {
   std::string secret          = "hello";
   std::string userEncrypted   = userEncryptString(secret);
@@ -53,3 +54,4 @@ TEST(CryptUtilsTest, UserAndSystemSecretsAreDifferent) {
   EXPECT_EQ(userDecrypted, secret);
   EXPECT_EQ(systemDecrypted, secret);
 }
+#endif

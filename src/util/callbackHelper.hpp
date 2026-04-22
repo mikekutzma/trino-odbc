@@ -27,8 +27,8 @@ void removeCallbackFromVector(std::vector<std::function<TFunc>>& callbackVector,
                      [&removeCallback](const std::function<TFunc>& callback) {
                        bool sameTargetType = callback.target_type() ==
                                              removeCallback.target_type();
-                       bool sameTarget = callback.target<TFunc>() ==
-                                         removeCallback.target<TFunc>();
+                       bool sameTarget = callback.template target<TFunc>() ==
+                                         removeCallback.template target<TFunc>();
                        return sameTargetType and sameTarget;
                      });
   callbackVector.erase(it, callbackVector.end());

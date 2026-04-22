@@ -2,11 +2,15 @@
 
 #include "../../../util/windowsLean.hpp"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include <shlobj.h> // For getting windows folder paths.
 #include <string>
+
+#ifdef _WIN32
+#include <shlobj.h> // For getting windows folder paths.
+#endif
 
 #include "../../../util/b64decoder.hpp"
 #include "../../../util/cryptUtils.hpp"
@@ -86,7 +90,8 @@ std::string TokenCacheEntry::getTokenId() {
   return this->tokenId;
 }
 
-std::wstring getTempFilePath() {
+#ifdef _WIN32
+std::filesystem::path getTempFilePath() {
   PWSTR tempPath = nullptr;
   // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetknownfolderpath
   if (SUCCEEDED(
@@ -94,16 +99,25 @@ std::wstring getTempFilePath() {
     std::wstring tempPathStr(tempPath);
     // We are responsible for freeing the memory used to return the tempPath.
     CoTaskMemFree(tempPath);
-    return tempPathStr + L"\\Temp\\TrinoODBCTokenCache.json";
+    return std::filesystem::path(tempPathStr) / "Temp" / "TrinoODBCTokenCache.json";
   }
-  return L"";
+  return {};
 }
+#else
+std::filesystem::path getTempFilePath() {
+  const char* home = std::getenv("HOME");
+  if (home) {
+    return std::filesystem::path(home) / ".trino-odbc" / "token_cache.json";
+  }
+  return "/tmp/TrinoODBCTokenCache.json";
+}
+#endif
 
 
 TokenCacheEntry readTokenCache(const std::string& tokenId) {
-  std::wstring filePath = getTempFilePath();
+  std::filesystem::path filePath = getTempFilePath();
 
-  WriteLog(LL_TRACE, std::wstring(L"  Token cache file path is: " + filePath));
+  WriteLog(LL_TRACE, "  Token cache file path is: " + filePath.string());
 
   // Handle the case that the file doesn't exist.
   if (!std::filesystem::exists(filePath)) {
@@ -173,7 +187,7 @@ TokenCacheEntry readTokenCache(const std::string& tokenId) {
 
 
 void writeTokenCache(TokenCacheEntry cacheEntry) {
-  std::wstring filePath = getTempFilePath();
+  std::filesystem::path filePath = getTempFilePath();
 
   // Start by reading the cache file in its current state.
   std::ifstream inputFile(filePath);

@@ -7,5 +7,28 @@
 #define NOGDI
 #include <windows.h>
 #else
-#define WINDOWS_SPECIFIC_MACRO // This expands to nothing on non-Windows systems
+
+// SAL annotations are MSVC-only; define them as no-ops.
+#ifndef _In_
+#define _In_
+#define _Out_
+#define _Inout_
+#define _In_opt_
+#define _Out_opt_
+#define _Inout_opt_
+#define _In_reads_(x)
+#define _In_reads_opt_(x)
+#define _In_reads_bytes_(x)
+#define _In_reads_bytes_opt_(x)
+#define _Out_writes_(x)
+#define _Out_writes_opt_(x)
+#define _Out_writes_bytes_(x)
+#define _Out_writes_bytes_opt_(x)
+#define _Inout_updates_opt_(x)
+#define _Inout_updates_bytes_opt_(x)
+#define _Inexpressible_(x)
+#define _Success_(x)
+#define _Return_type_success_(x)
+#endif
+
 #endif

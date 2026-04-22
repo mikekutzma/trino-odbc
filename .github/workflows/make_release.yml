@@ -5,13 +5,13 @@ on:
     tags:
       # We want to create releases whenever semver tags
       # are pushed
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-2022
 
     env:
@@ -26,7 +26,7 @@ jobs:
 
       - name: Run vcpkg
         uses: lukka/run-vcpkg@v11
-        
+
       - name: Run CMake and build x86
         shell: cmd
         run: |
@@ -50,7 +50,7 @@ jobs:
 
       - name: Add WiX UI extension
         run: |
-         wix extension add -g WixToolset.UI.wixext/${{ env.WIX_VERSION }}
+          wix extension add -g WixToolset.UI.wixext/${{ env.WIX_VERSION }}
 
       - name: Build x86 installer
         shell: pwsh
@@ -62,10 +62,10 @@ jobs:
         run: |
           .\install\build_x64_installer.ps1
 
-      - name: Upload installers
+      - name: Upload windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: installers
+          name: windows-driver
           if-no-files-found: error
           overwrite: true
           path: |
@@ -74,18 +74,53 @@ jobs:
             install/LICENSE.rtf
             install/third_party_licenses.txt
 
-
-  # We need to build on Windows, but we can create the releases
-  # using Linux!
-  release:
-    runs-on: ubuntu-latest
-    needs: build
+  build-mac:
+    runs-on: macos-14
 
     steps:
-      - name: Download build artifacts
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install ninja nlohmann-json unixodbc googletest
+
+      - name: Build
+        run: |
+          SDK_PATH=$(xcrun --show-sdk-path)
+          cmake --preset mac-release \
+            -DCMAKE_OSX_SYSROOT="$SDK_PATH" \
+            -DCMAKE_CXX_FLAGS="-isystem $SDK_PATH/usr/include/c++/v1"
+          cmake --build build
+
+      - name: Run unit tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package
+        run: tar -czf TrinoODBC_macOS_arm64.tar.gz -C build libTrinoODBC.dylib
+
+      - name: Upload macos artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-driver
+          if-no-files-found: error
+          overwrite: true
+          path: TrinoODBC_macOS_arm64.tar.gz
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-mac]
+
+    steps:
+      - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
-          name: installers
+          name: windows-driver
+          path: ./installers
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-driver
           path: ./installers
 
       - name: Create Release
@@ -99,5 +134,6 @@ jobs:
           files: |
             installers/TrinoODBC_x86.msi
             installers/TrinoODBC_x64.msi
+            installers/TrinoODBC_macOS_arm64.tar.gz
             installers/LICENSE.rtf
             installers/third_party_licenses.txt

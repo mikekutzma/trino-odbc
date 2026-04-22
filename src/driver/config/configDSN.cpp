@@ -9,8 +9,11 @@
 #include "../../util/cryptUtils.hpp"
 #include "../../util/delimKvpHelper.hpp"
 #include "../../util/writeLog.hpp"
-#include "dsnConfigForm.hpp"
 #include "profileReader.hpp"
+
+#ifdef _WIN32
+#include "dsnConfigForm.hpp"
+#endif
 
 bool isSystemDSN() {
   /*
@@ -57,6 +60,8 @@ void writeToProfile(DriverConfig result,
         dsn.c_str(), section.c_str(), value.c_str(), "ODBC.INI");
   }
 }
+
+#ifdef _WIN32
 
 BOOL APIENTRY ConfigDSN(HWND hwndParent,
                         WORD fRequest,
@@ -119,3 +124,16 @@ BOOL APIENTRY ConfigDSN(HWND hwndParent,
     return false;
   }
 }
+
+#else
+
+BOOL ConfigDSN(HWND hwndParent,
+               WORD fRequest,
+               LPCSTR lpszDriver,
+               LPCSTR lpszAttributes) {
+  WriteLog(LL_WARN, "ConfigDSN: GUI configuration not supported on this "
+                    "platform. Use odbcinst.ini or connection string.");
+  return false;
+}
+
+#endif

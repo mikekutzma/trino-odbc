@@ -1,4 +1,6 @@
 #include "browserInteraction.hpp"
+
+#ifdef _WIN32
 #include <shellapi.h>
 
 void openURLInDefaultBrowser(const std::string& url) {
@@ -13,3 +15,21 @@ void openURLInDefaultBrowser(const std::string& url) {
                MB_ICONERROR);
   }
 }
+
+#elif defined(__APPLE__)
+#include <cstdlib>
+
+void openURLInDefaultBrowser(const std::string& url) {
+  std::string command = "open '" + url + "'";
+  system(command.c_str());
+}
+
+#else
+#include <cstdlib>
+
+void openURLInDefaultBrowser(const std::string& url) {
+  std::string command = "xdg-open '" + url + "'";
+  system(command.c_str());
+}
+
+#endif

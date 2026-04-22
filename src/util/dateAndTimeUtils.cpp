@@ -2,8 +2,14 @@
 
 #include <charconv>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <map>
+#include <string>
 
+#ifdef _WIN32
 std::map<std::string, const std::chrono::time_zone*> TIMEZONE_CACHE = {};
 
 const std::chrono::time_zone* getTimezone(std::string& tzName) {
@@ -18,6 +24,7 @@ const std::chrono::time_zone* getTimezone(std::string& tzName) {
   }
   return TIMEZONE_CACHE[tzName];
 }
+#endif
 
 /*
 How many characters into a standard trino timestamp do the
@@ -215,6 +222,8 @@ ParsedTimestamp parseTimestamp(const std::string& input) {
     // If there's no timezone, assume the timestamp is already in UTC.
     timezoneName = "Etc/UTC";
   }
+
+#ifdef _WIN32
   // Create a timezone aware time object.
   const std::chrono::time_zone* tz = getTimezone(timezoneName);
   std::chrono::zoned_time<std::chrono::nanoseconds> zonedTime(tz,
@@ -224,6 +233,44 @@ ParsedTimestamp parseTimestamp(const std::string& input) {
   // which is UTC-zoned.
   std::chrono::sys_time<std::chrono::nanoseconds> utcTime =
       zonedTime.get_sys_time();
+#else
+  // Apple libc++ does not support std::chrono::time_zone.
+  // Use POSIX tzset/mktime to compute the UTC offset for the given timezone.
+  auto epochNs = localTimestamp.time_since_epoch().count();
+  long long totalSecs =
+      epochNs / 1'000'000'000LL;
+  long long remainderNs = epochNs % 1'000'000'000LL;
+  if (remainderNs < 0) {
+    totalSecs--;
+    remainderNs += 1'000'000'000LL;
+  }
+
+  struct tm tmBuf = {};
+  tmBuf.tm_year   = static_cast<int>(yearRaw) - 1900;
+  tmBuf.tm_mon    = static_cast<int>(monthRaw) - 1;
+  tmBuf.tm_mday   = static_cast<int>(dayRaw);
+  tmBuf.tm_hour   = static_cast<int>(hourRaw);
+  tmBuf.tm_min    = static_cast<int>(minuteRaw);
+  tmBuf.tm_sec    = static_cast<int>(secondRaw);
+  tmBuf.tm_isdst  = -1;
+
+  // Save and set TZ to the target timezone, then use mktime to get the
+  // UTC epoch, then restore TZ.
+  const char* oldTZ = std::getenv("TZ");
+  std::string savedTZ = oldTZ ? oldTZ : "";
+  setenv("TZ", timezoneName.c_str(), 1);
+  tzset();
+  time_t localEpoch = mktime(&tmBuf);
+  if (!savedTZ.empty()) {
+    setenv("TZ", savedTZ.c_str(), 1);
+  } else {
+    unsetenv("TZ");
+  }
+  tzset();
+
+  auto utcTime = std::chrono::sys_time<std::chrono::nanoseconds>(
+      std::chrono::seconds(localEpoch) + std::chrono::nanoseconds(remainderNs));
+#endif
 
   // Convert our timestamp to a date/time suitable to return.
   std::chrono::year_month_day ymdOut =

@@ -21,10 +21,17 @@ LogLevel CURRENT_LOG_LEVEL = DEFAULT_LOG_LEVEL;
 
 std::ofstream* logStreamPtr = nullptr;
 
+static const char* getLogPath() {
+#ifdef _WIN32
+  return "C:\\temp\\odbclog.txt";
+#else
+  return "/tmp/odbclog.txt";
+#endif
+}
+
 static std::ofstream* getLogStream() {
   if (logStreamPtr == nullptr) {
-    logStreamPtr =
-        new std::ofstream("C:\\temp\\odbclog.txt", std::ios_base::app);
+    logStreamPtr = new std::ofstream(getLogPath(), std::ios_base::app);
   }
   return logStreamPtr;
 }
@@ -33,8 +40,7 @@ std::wofstream* wideLogStreamPtr = nullptr;
 
 static std::wofstream* getWideLogStream() {
   if (wideLogStreamPtr == nullptr) {
-    wideLogStreamPtr =
-        new std::wofstream("C:\\temp\\odbclog.txt", std::ios_base::app);
+    wideLogStreamPtr = new std::wofstream(getLogPath(), std::ios_base::app);
   }
   return wideLogStreamPtr;
 }
@@ -52,10 +58,12 @@ tm getTime() {
   auto now       = std::chrono::system_clock::now();
   auto in_time_t = std::chrono::system_clock::to_time_t(now);
 
-  // Convert time to local time, but be sure to use the "safe"
-  // version of the function: localtime_s
   std::tm buf;
+#ifdef _WIN32
   localtime_s(&buf, &in_time_t);
+#else
+  localtime_r(&in_time_t, &buf);
+#endif
 
   return buf;
 }

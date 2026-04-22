@@ -3,10 +3,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include "windowsLean.hpp"
-#include <dpapi.h>
-#include <wincrypt.h>
-
 #include "writeLog.hpp"
 
 // Helper function to extract filename from a full path
@@ -17,6 +13,12 @@ std::string_view getFileName(std::string_view path) {
   }
   return path.substr(pos + 1);
 }
+
+#ifdef _WIN32
+
+#include "windowsLean.hpp"
+#include <dpapi.h>
+#include <wincrypt.h>
 
 // Helper function to get the last Windows error message
 std::string getLastErrorAsString() {
@@ -181,3 +183,28 @@ std::string systemDecryptString(const std::string& text) {
   // Decrypt a string using the user's login data.
   return decryptString(text, 0);
 }
+
+#else // Non-Windows platforms
+// Not implementing keychain support for now.
+
+std::string userEncryptString(const std::string& text) {
+  WriteLog(LL_WARN, "Encryption not implemented on this platform");
+  return text;
+}
+
+std::string systemEncryptString(const std::string& text) {
+  WriteLog(LL_WARN, "Encryption not implemented on this platform");
+  return text;
+}
+
+std::string userDecryptString(const std::string& text) {
+  WriteLog(LL_WARN, "Decryption not implemented on this platform");
+  return text;
+}
+
+std::string systemDecryptString(const std::string& text) {
+  WriteLog(LL_WARN, "Decryption not implemented on this platform");
+  return text;
+}
+
+#endif

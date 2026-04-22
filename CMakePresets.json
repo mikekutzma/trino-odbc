@@ -59,6 +59,38 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "mac-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "/opt/homebrew",
+        "CMAKE_OSX_SYSROOT": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "CMAKE_CXX_FLAGS": "-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "mac-debug",
+      "displayName": "Mac Debug",
+      "inherits": "mac-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "mac-release",
+      "displayName": "Mac Release",
+      "inherits": "mac-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
   "buildPresets": [
@@ -85,6 +117,18 @@
       "displayName": "x86 Debug",
       "configurePreset": "x86-debug",
       "configuration": "Debug"
+    },
+    {
+      "name": "mac-debug",
+      "displayName": "Mac Debug",
+      "configurePreset": "mac-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "mac-release",
+      "displayName": "Mac Release",
+      "configurePreset": "mac-release",
+      "configuration": "Release"
     }
   ]
 }

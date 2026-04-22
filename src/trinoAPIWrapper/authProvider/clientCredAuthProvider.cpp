@@ -1,4 +1,5 @@
 #include <regex>
+#include <sstream>
 
 #include "clientCredAuthProvider.hpp"
 

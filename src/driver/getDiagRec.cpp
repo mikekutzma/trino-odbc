@@ -2,6 +2,9 @@
 #include <sql.h>
 #include <sqlext.h>
 
+#include <cstring>
+#include <sstream>
+
 #include "handles/connHandle.hpp"
 #include "handles/descriptorHandle.hpp"
 #include "handles/envHandle.hpp"
@@ -129,10 +132,9 @@ SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT HandleType,
         // Copy the chunk to the output buffer
         size_t toCopy = std::min(chunk.size(), chunkSize);
         if (MessageTextPtr && BufferLength > 0) {
-          strncpy_s(reinterpret_cast<char*>(MessageTextPtr),
-                    BufferLength,
-                    chunk.c_str(),
-                    toCopy);
+          std::memcpy(reinterpret_cast<char*>(MessageTextPtr),
+                      chunk.c_str(),
+                      toCopy);
           reinterpret_cast<char*>(MessageTextPtr)[toCopy] = '\0';
         }
         if (TextLengthPtr) {
