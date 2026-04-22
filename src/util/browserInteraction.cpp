@@ -1,6 +1,7 @@
 #include "browserInteraction.hpp"
 
 #ifdef _WIN32
+#include "windowsLean.hpp"
 #include <shellapi.h>
 
 void openURLInDefaultBrowser(const std::string& url) {
