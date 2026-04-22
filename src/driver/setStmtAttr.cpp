@@ -19,7 +19,9 @@ SQLRETURN SQL_API SQLSetStmtAttr(SQLHSTMT StatementHandle,
   switch (Attribute) {
     case SQL_ATTR_ROWS_FETCHED_PTR: { // 26
       SQLULEN* rowsProcessedPtr = static_cast<SQLULEN*>(Value);
-      WriteLog(LL_TRACE, std::format("  Attribute value is set to {}", Value));
+      WriteLog(LL_TRACE,
+               "  Attribute value is set to " +
+                   std::to_string(reinterpret_cast<uintptr_t>(Value)));
       Descriptor* impRowDesc             = statement->impRowDesc;
       impRowDesc->Field_RowsProcessedPtr = rowsProcessedPtr;
       break;
