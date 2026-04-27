@@ -95,10 +95,9 @@ std::string refreshExternalAuth(ExternalAuthParams& params) {
   if (bearerPos != std::string::npos) {
     size_t kvpStart = bearerPos + bearerPrefix.size();
     size_t kvpEnd   = wwwAuthHeader.find('\n', kvpStart);
-    headerKVPs      = wwwAuthHeader.substr(kvpStart,
-                                           kvpEnd == std::string::npos
-                                               ? std::string::npos
-                                               : kvpEnd - kvpStart);
+    headerKVPs      = wwwAuthHeader.substr(
+        kvpStart,
+        kvpEnd == std::string::npos ? std::string::npos : kvpEnd - kvpStart);
   }
 
   if (headerKVPs.empty()) {
