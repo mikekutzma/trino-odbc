@@ -36,7 +36,10 @@ curlHeaderCallback(char* buffer, size_t size, size_t nitems, void* userdata) {
       // The values usually end in \r\n at a minimum, so we need
       // to trim that off.
       trim(value);
-      responseHeaderData->insert({key, value});
+      auto [it, inserted] = responseHeaderData->insert({key, value});
+      if (!inserted) {
+        it->second += "\n" + value;
+      }
     }
   }
   // Return the number of bytes consumed to signal success.
