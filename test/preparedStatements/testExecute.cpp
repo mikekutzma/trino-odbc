@@ -1,9 +1,9 @@
-#include <cstdint>
+#include <windows.h>
+
 #include <gtest/gtest.h>
 #include <sql.h>
 #include <sqlext.h>
 #include <string>
-#include <windows.h>
 
 #include "../../src/driver/execute.cpp"
 
@@ -58,19 +58,19 @@ TEST(DescriptorFieldToParameterTextTest, CharSqlInjectionAttempt) {
 // SQL_C_LONG – 32-bit signed integer
 // ---------------------------------------------------------------------------
 TEST(DescriptorFieldToParameterTextTest, LongPositive) {
-  int32_t value     = 42;
+  SQLINTEGER value  = 42;
   DescriptorField f = makeField(SQL_C_LONG, &value);
   EXPECT_EQ(descriptorFieldToParameterText(f), "42");
 }
 
 TEST(DescriptorFieldToParameterTextTest, LongNegative) {
-  int32_t value     = -7;
+  SQLINTEGER value  = -7;
   DescriptorField f = makeField(SQL_C_LONG, &value);
   EXPECT_EQ(descriptorFieldToParameterText(f), "-7");
 }
 
 TEST(DescriptorFieldToParameterTextTest, LongZero) {
-  int32_t value     = 0;
+  SQLINTEGER value  = 0;
   DescriptorField f = makeField(SQL_C_LONG, &value);
   EXPECT_EQ(descriptorFieldToParameterText(f), "0");
 }
