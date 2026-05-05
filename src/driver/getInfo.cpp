@@ -199,12 +199,13 @@ _Success_(return == SQL_SUCCESS) SQLRETURN SQL_API
           /* SQL_FN_STR_LCASE */
           /* SQL_FN_STR_LEFT */
           SQL_FN_STR_LENGTH |
-          /* SQL_FN_STR_LOCATE */
+          SQL_FN_STR_LOCATE |
+          SQL_FN_STR_LOCATE_2 |
           SQL_FN_STR_LTRIM |
           /* SQL_FN_STR_OCTET_LENGTH | */
           SQL_FN_STR_POSITION |
           /* SQL_FN_STR_REPEAT | */
-          /* SQL_FN_STR_REPLACE | */
+          SQL_FN_STR_REPLACE |
           /* SQL_FN_STR_RIGHT | */
           SQL_FN_STR_RTRIM |
           SQL_FN_STR_SOUNDEX |
@@ -639,9 +640,13 @@ _Success_(return == SQL_SUCCESS) SQLRETURN SQL_API
       break;
     }
     case SQL_SQL_CONFORMANCE: { // 118
-      // What level of SQL spec does Trino conform to? Let's guess the
-      // lowest level for which there is a constant defined.
-      *((SQLUINTEGER*)InfoValue) = SQL_SC_SQL92_ENTRY;
+      // What level of SQL spec does Trino conform to?
+      // Per Microsoft's documentation
+      // https://learn.microsoft.com/en-us/power-query/odbc-parameters#overriding-sqlgetinfo
+      // "Most drivers will want to report a SQL_SC_SQL92_FULL compliance level,
+      // and override specific SQL generation behavior using the SQLGetInfo
+      // kand SQLGetFunctions properties."
+      *((SQLUINTEGER*)InfoValue) = SQL_SC_SQL92_FULL;
       break;
     }
     case SQL_CONVERT_WCHAR: { // 122
