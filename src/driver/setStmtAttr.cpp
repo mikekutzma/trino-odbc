@@ -32,10 +32,10 @@ SQLRETURN SQL_API SQLSetStmtAttr(SQLHSTMT StatementHandle,
       break;
     }
     default: {
-      WriteLog(LL_ERROR,
-               "  ERROR: Attribute " + std::to_string(Attribute) +
-                   " is not implemented");
-      return SQL_ERROR;
+      WriteLog(LL_WARN,
+               "  WARN: Attribute " + std::to_string(Attribute) +
+                   " is not implemented - ignoring");
+      break;
     }
   }
 

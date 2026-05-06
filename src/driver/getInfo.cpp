@@ -776,16 +776,12 @@ _Success_(return == SQL_SUCCESS) SQLRETURN SQL_API
       *((SQLUINTEGER*)InfoValue) = SQL_ASYNC_NOTIFICATION_NOT_CAPABLE;
       break;
     }
-    // Handle other InfoType cases...
     default: {
-      WriteLog(LL_ERROR,
-               "  ERROR: No info for requested parameter: " +
-                   std::to_string(InfoType) + " - returning error code");
-      std::string errorMessage =
-          "Unknown InfoType to SQLGetInfo with id: " + std::to_string(InfoType);
-      // HY091 = Invalid Descriptor Field Identifier.
-      connection->setError(ErrorInfo(errorMessage, "HY091"));
-      return SQL_ERROR;
+      WriteLog(LL_WARN,
+               "  WARN: No info for requested parameter: " +
+                   std::to_string(InfoType) + " - returning 0");
+      *((SQLUINTEGER*)InfoValue) = 0;
+      break;
     }
   }
   return SQL_SUCCESS;
